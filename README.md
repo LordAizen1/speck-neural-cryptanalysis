@@ -4,16 +4,26 @@ ML-based distinguishers that learn to tell apart reduced-round SPECK 32/64 ciphe
 
 ## Overview
 
-Given a pair of plaintexts with a fixed XOR difference `ΔP = (0x0040, 0x0000)`, the cipher produces ciphertext pairs `(C, C')` with subtle statistical biases that decay as rounds increase. A random permutation produces no such bias. Neural networks can learn to detect this.
+Given a pair of plaintexts with a fixed XOR difference `DP = (0x0040, 0x0000)`, the cipher produces ciphertext pairs `(C, C')` with subtle statistical biases that decay as rounds increase. A random permutation produces no such bias. Neural networks can learn to detect this.
+
+## Results
+
+| Model | R=3 | R=4 | R=5 | R=6 | R=7 | R=8 |
+|-------|-----|-----|-----|-----|-----|-----|
+| **MLP** | 99.37% | 92.45% | 82.30% | 60.36% | ~50% | ~50% |
+| **CNN** | **99.99%** | **97.37%** | **87.72%** | **69.55%** | ~50% | ~50% |
+| **Siamese** | 99.40% | 92.82% | 83.03% | 68.59% | ~50% | ~50% |
+
+![Accuracy vs Rounds](results/accuracy_vs_rounds.png)
+
+All models hit random-guess levels at 7 rounds, establishing 6 rounds as the maximum distinguishable boundary for SPECK 32/64 with this input difference.
 
 ## Models
-
-Three architectures are compared across 5–8 cipher rounds:
 
 | Model | Description | Params |
 |-------|-------------|--------|
 | **MLP** | 4-layer fully connected network | ~115K |
-| **CNN** | 1D convolutional network over bit vectors | ~17K |
+| **CNN** | 1D residual CNN with 2-channel input (C0, C1) | ~540K |
 | **Siamese** | Twin-branch network with shared weights | ~50K |
 
 ## Project Structure
@@ -23,7 +33,9 @@ speck.py          # SPECK 32/64 cipher (vectorized NumPy)
 dataset.py        # Data generation (cipher pairs vs random)
 models.py         # MLP, CNN, Siamese architectures (PyTorch)
 train.py          # Training loop, evaluation, plotting
-requirements.txt  # Dependencies
+run.sh            # SLURM job script for HPC cluster
+report.tex        # LaTeX report source
+results/          # Plots, ROC curves, training curves
 ```
 
 ## Setup
@@ -43,10 +55,9 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 python train.py
 ```
 
-Trains all 3 models on 5, 6, 7, and 8-round SPECK, then saves plots and results to `results/`.
+Trains all 3 models on 3-8 round SPECK, then saves plots and results to `results/`.
 
-## Input Representations
+## Authors
 
-- **raw_pairs** — `(C₀, C₁)` as 64 bits (default)
-- **xor_diff** — `C₀ ⊕ C₁` as 32 bits
-- **concat_xor** — raw pairs + XOR difference as 96 bits
+- Sweta Snigdha (2022527)
+- Md Kaif (2022289)

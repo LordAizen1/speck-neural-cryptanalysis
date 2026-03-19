@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
-results/
 *.pt
 *.pth
 .env
+docs/
+.mcp.json
