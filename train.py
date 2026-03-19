@@ -20,13 +20,13 @@ from models import build_model
 
 # ── config ───────────────────────────────────────────────────────────
 SEED         = 42
-ROUND_COUNTS = [5, 6, 7, 8]
+ROUND_COUNTS = [3, 4, 5, 6, 7, 8]
 N_TRAIN      = 500_000
 N_TEST       = 100_000
 BATCH_SIZE   = 5000
-EPOCHS       = 30
+EPOCHS       = 40
 LR           = 1e-3
-PATIENCE     = 5            # early-stopping patience (epochs)
+PATIENCE     = 7            # early-stopping patience (epochs)
 DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
 RESULTS_DIR  = os.path.join(os.path.dirname(__file__), "results")
 MODE         = "raw_pairs"  # input representation for all models

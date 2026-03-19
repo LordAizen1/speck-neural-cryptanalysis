@@ -29,29 +29,53 @@ class MLPDistinguisher(nn.Module):
 
 
 # ── 2. CNN ───────────────────────────────────────────────────────────
+class _ResBlock(nn.Module):
+    """1-D residual block: two conv layers with a skip connection."""
+
+    def __init__(self, channels, kernel_size=3):
+        super().__init__()
+        pad = kernel_size // 2
+        self.block = nn.Sequential(
+            nn.Conv1d(channels, channels, kernel_size, padding=pad),
+            nn.BatchNorm1d(channels), nn.ReLU(),
+            nn.Conv1d(channels, channels, kernel_size, padding=pad),
+            nn.BatchNorm1d(channels),
+        )
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        return self.relu(x + self.block(x))
+
+
 class CNNDistinguisher(nn.Module):
-    """1-D convolutional distinguisher — treats bits as a 1-D signal."""
+    """
+    1-D CNN with residual blocks.  Input is reshaped to 2 channels
+    (C0 bits, C1 bits) so the conv layers see the pair structure.
+    """
 
     def __init__(self, input_dim=64):
         super().__init__()
-        self.input_dim = input_dim
-        self.conv = nn.Sequential(
-            nn.Conv1d(1, 32, kernel_size=3, padding=1),
-            nn.BatchNorm1d(32), nn.ReLU(),
-            nn.Conv1d(32, 32, kernel_size=3, padding=1),
-            nn.BatchNorm1d(32), nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+        self.half = input_dim // 2   # 32 bits per ciphertext
+        self.initial = nn.Sequential(
+            nn.Conv1d(2, 64, kernel_size=3, padding=1),
             nn.BatchNorm1d(64), nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1),
         )
+        self.res1 = _ResBlock(64)
+        self.res2 = _ResBlock(64)
         self.head = nn.Sequential(
-            nn.Linear(64, 64), nn.BatchNorm1d(64), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(64, 1),  nn.Sigmoid(),
+            nn.Flatten(),
+            nn.Linear(64 * self.half, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.2),
+            nn.Linear(256, 64), nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Linear(64, 1), nn.Sigmoid(),
         )
 
     def forward(self, x):
-        x = x.unsqueeze(1)          # (B, 1, D)
-        x = self.conv(x).squeeze(2) # (B, 64)
+        c0 = x[:, :self.half].unsqueeze(1)   # (B, 1, 32)
+        c1 = x[:, self.half:].unsqueeze(1)    # (B, 1, 32)
+        x = torch.cat([c0, c1], dim=1)        # (B, 2, 32)
+        x = self.initial(x)                   # (B, 64, 32)
+        x = self.res1(x)
+        x = self.res2(x)
         return self.head(x).squeeze(-1)
 
 
