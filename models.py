@@ -49,31 +49,35 @@ class _ResBlock(nn.Module):
 
 class CNNDistinguisher(nn.Module):
     """
-    1-D CNN with residual blocks.  Input is reshaped to 2 channels
-    (C0 bits, C1 bits) so the conv layers see the pair structure.
+    1-D CNN with residual blocks.
+
+    For raw_pairs (64-bit): reshaped to 2 channels (C0, C1) x 32 bits.
+    For xor_diff (32-bit): single channel x 32 bits.
+    For concat_xor (96-bit): 3 channels (C0, C1, XOR) x 32 bits.
     """
 
     def __init__(self, input_dim=64):
         super().__init__()
-        self.half = input_dim // 2   # 32 bits per ciphertext
+        self.input_dim = input_dim
+        in_channels = input_dim // 32       # 64->2, 32->1, 96->3
+        seq_len = 32
         self.initial = nn.Sequential(
-            nn.Conv1d(2, 64, kernel_size=3, padding=1),
+            nn.Conv1d(in_channels, 64, kernel_size=3, padding=1),
             nn.BatchNorm1d(64), nn.ReLU(),
         )
         self.res1 = _ResBlock(64)
         self.res2 = _ResBlock(64)
         self.head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(64 * self.half, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.2),
+            nn.Linear(64 * seq_len, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.2),
             nn.Linear(256, 64), nn.BatchNorm1d(64), nn.ReLU(),
             nn.Linear(64, 1), nn.Sigmoid(),
         )
 
     def forward(self, x):
-        c0 = x[:, :self.half].unsqueeze(1)   # (B, 1, 32)
-        c1 = x[:, self.half:].unsqueeze(1)    # (B, 1, 32)
-        x = torch.cat([c0, c1], dim=1)        # (B, 2, 32)
-        x = self.initial(x)                   # (B, 64, 32)
+        # reshape to (B, channels, 32)
+        x = x.view(x.size(0), -1, 32)
+        x = self.initial(x)
         x = self.res1(x)
         x = self.res2(x)
         return self.head(x).squeeze(-1)
