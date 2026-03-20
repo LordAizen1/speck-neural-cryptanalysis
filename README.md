@@ -33,8 +33,9 @@ speck.py          # SPECK 32/64 cipher (vectorized NumPy)
 dataset.py        # Data generation (cipher pairs vs random)
 models.py         # MLP, CNN, Siamese architectures (PyTorch)
 train.py          # Training loop, evaluation, plotting
+train_repr.py     # Representation comparison experiment
 run.sh            # SLURM job script for HPC cluster
-report.tex        # LaTeX report source
+AC_Project.pdf    # Project report
 results/          # Plots, ROC curves, training curves
 ```
 
@@ -56,6 +57,10 @@ python train.py
 ```
 
 Trains all 3 models on 3-8 round SPECK, then saves plots and results to `results/`.
+
+## Course
+
+This project was developed as part of the **Applied Cryptography** course at IIIT Delhi, taught by **Dr. Ravi Anand**.
 
 ## Authors
 
